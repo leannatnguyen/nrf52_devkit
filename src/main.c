@@ -2,11 +2,32 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/printk.h>
 
 #define MY_SENSOR_NODE DT_ALIAS(my_sensor)
 
-LOG_MODULE_REGISTER(main);
+#define MY_THREAD_STACK_SIZE 1024
+#define MY_THREAD_PRIORITY 5
 
+LOG_MODULE_REGISTER(main);
+K_THREAD_STACK_DEFINE(my_sensor_thread, MY_THREAD_STACK_SIZE);
+K_THREAD_STACK_DEFINE(my_uart_thread, MY_THREAD_STACK_SIZE);
+static struct k_thread my_sensor_thread;
+static struct k_thread my_uart_thread;
+
+void my_sensor_thread(void *p1, void *p2, void *p3) {
+
+        while (1) {
+
+                k_sleep(K_MSEC(2000)); // sleep for 2 seconds
+        }
+}
+
+void my_uart_thread(void *p1, void *p2, void *p3) {
+        while (1) {
+
+        }
+}
 int main(void)
 {
         LOG_INF("Starting up!");
@@ -44,6 +65,6 @@ int main(void)
         } else {
                 LOG_INF("Temperature is %d.%06d°C", temp.val1, temp.val2);
         }
-
+        
         return 0;
 }
