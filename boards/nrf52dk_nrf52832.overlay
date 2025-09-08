@@ -1,0 +1,14 @@
+/ {
+    aliases {
+        my-sensor = &my_sensor;  // Points to your sensor node
+    };
+};
+
+&i2c0 {
+    // Add SHT31 sensor  
+    my_sensor: sensor@44 {
+        compatible = "sensirion,sht3xd";
+        reg = <0x44>;  // I2C address
+        status = "okay";
+    };
+};
