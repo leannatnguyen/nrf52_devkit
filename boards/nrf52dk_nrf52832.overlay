@@ -1,6 +1,6 @@
 / {
     aliases {
-        my-sensor = &my_sensor;  // Points to your sensor node
+        my-sensor = &my_sensor;  // Points to sensor node
     };
 };
 
