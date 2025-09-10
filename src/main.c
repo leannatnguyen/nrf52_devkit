@@ -2,48 +2,135 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/printk.h>
 
 #define MY_SENSOR_NODE DT_ALIAS(my_sensor)
 
+#define MY_THREAD_STACK_SIZE 1024
+#define MY_THREAD_PRIORITY 5
+
+struct sensor_message {
+        float temp;
+        float humidity;
+};
+
 LOG_MODULE_REGISTER(main);
 
+K_THREAD_STACK_DEFINE(my_sensor_thread, MY_THREAD_STACK_SIZE);
+K_THREAD_STACK_DEFINE(my_uart_thread, MY_THREAD_STACK_SIZE);
+static struct k_thread my_sensor_thread_data;
+static struct k_thread my_uart_thread_data;
+
+K_MSGQ_DEFINE(sensor_queue, sizeof(struct sensor_message), 5, 4);
+
+void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
+        // Cast device's pointer back to the correct type
+        const struct device *sensor_device = (const struct device *)device_ptr;
+        if (!device_is_ready(sensor_device)){
+                // handle error
+                LOG_ERR("Sensor is not ready");
+                return;
+        }
+        LOG_INF("Sensor is ready.");
+
+        struct sensor_message msg;
+
+        while (1) {
+                struct sensor_value temp, humidity;
+                int ret = sensor_sample_fetch(sensor_device);
+
+                if (ret < 0) {
+                        LOG_ERR("Failed to fetch temperature and humidity.");
+                } else {
+                        LOG_INF("Temperature and humidity Fetched.");
+
+                }
+
+                // Read humidity and temperature + add to message queue
+                int ret_humidity = sensor_channel_get(sensor_device, SENSOR_CHAN_HUMIDITY, &humidity);
+                int ret_temp= sensor_channel_get(sensor_device, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+                if (ret_humidity < 0) {
+                        LOG_ERR("Failed to get humidity. Error: %d", ret_humidity);
+                        break;
+                } else if(ret_temp < 0) {
+                        LOG_ERR("Failed to get temperature. Error: %d", ret_temp);
+                        break;
+                }
+                else {
+                        msg.temp = sensor_value_to_double(&temp);
+                        msg.humidity = sensor_value_to_double(&humidity);
+                        // LOG_INF(......);
+                        k_msgq_put(&sensor_queue, &msg, K_NO_WAIT);
+                }
+
+                k_sleep(K_MSEC(2000)); // sleep for 2 seconds
+        }
+}
+
+void my_uart_thread_function(void *p1, void *p2, void *p3) {
+        struct sensor_message msg;
+
+        while (1) {
+                int ret = k_msgq_get(&sensor_queue, &msg, K_FOREVER);
+                if (ret == 0) {
+                        LOG_INF("Temperature = %.2f C, Humidity = %.2f%%", (double)msg.temp, (double)msg.humidity);
+                }
+        }
+}
 int main(void)
 {
         LOG_INF("Starting up!");
-        struct sensor_value temp, humidity;
+        // struct sensor_value temp, humidity;
 
         // Get device
         const struct device *sensor_device = DEVICE_DT_GET(MY_SENSOR_NODE);
 
-        if (!device_is_ready(sensor_device)){
-                // handle error
-                LOG_ERR("Sensor is not ready");
-                return -1;
-        }
-        LOG_INF("Sensor is ready!");
 
-        // Get data
-        int ret = sensor_sample_fetch(sensor_device);
-        if (ret < 0) {
-                LOG_ERR("Failed to fetch sensor sample. Error: %d", ret);
-                return -1;
-        }
-        LOG_INF("Sensor sample fetched.");
+        k_thread_create(&my_sensor_thread_data, my_sensor_thread, MY_THREAD_STACK_SIZE, 
+                                my_sensor_thread_function,(void *)sensor_device, NULL, 
+                                NULL,MY_THREAD_PRIORITY, 0, K_NO_WAIT);
 
-        // Read humidity and temperature
-        int ret_humidity = sensor_channel_get(sensor_device, SENSOR_CHAN_HUMIDITY, &humidity);
-        if (ret_humidity < 0) {
-                LOG_ERR("Failed to get humnidity. Error: %d", ret_humidity);
-        } else {
-                LOG_INF("Humdity is %d.%06d%%", humidity.val1, humidity.val2);
-        }
+        k_thread_create(&my_uart_thread_data, my_uart_thread, MY_THREAD_STACK_SIZE, 
+                                my_uart_thread_function, NULL, NULL, 
+                                NULL, MY_THREAD_PRIORITY, 0, K_NO_WAIT);
 
-        int ret_temp= sensor_channel_get(sensor_device, SENSOR_CHAN_AMBIENT_TEMP, &temp);
-        if (ret_temp < 0) {
-                LOG_ERR("Failed to get temperature. Error: %d", ret_temp);
-        } else {
-                LOG_INF("Temperature is %d.%06d°C", temp.val1, temp.val2);
+        while (1) 
+        {
+                k_sleep(K_MSEC(5000));
+                LOG_INF("MAIN THREAD STILL RUNNING!\n");
         }
+        
 
         return 0;
 }
+
+
+/* Output Log - Working
+*** Booting nRF Connect SDK v2.7.0-5cb85570ca43 ***
+*** Using Zephyr OS v3.6.99-100befc70c74 ***
+[00:00:00.473,571] <inf> main: Starting up!
+[00:00:00.473,632] <inf> main: Sensor is ready.
+[00:00:00.474,731] <inf> main: Temperature and humidity Fetched.
+[00:00:00.474,792] <inf> main: Temperature = 27.40 C, Humidity = 51.75%
+[00:00:02.475,952] <inf> main: Temperature and humidity Fetched.
+[00:00:02.476,043] <inf> main: Temperature = 27.41 C, Humidity = 51.66%
+[00:00:04.477,203] <inf> main: Temperature and humidity Fetched.
+[00:00:04.477,294] <inf> main: Temperature = 27.37 C, Humidity = 51.63%
+[00:00:05.473,663] <inf> main: MAIN THREAD STILL RUNNING!
+*/
+
+/* Output Log - NOT Working
+[00:01:25.449,920] <inf> main: MAIN THREAD STILL RUNNING!
+
+[00:01:26.983,123] <err> main: Failed to fetch temperature and humidity.
+[00:01:26.983,215] <inf> main: Temperature = 25.93 C, Humidity = 54.51%
+[00:01:28.983,856] <err> main: Failed to fetch temperature and humidity.
+[00:01:28.983,947] <inf> main: Temperature = 25.93 C, Humidity = 54.51%
+*** Booting nRF Connect SDK v2.7.0-5cb85570ca43 ***
+*** Using Zephyr OS v3.6.99-100befc70c74 ***
+[00:00:00.932,647] <inf> main: Starting up!
+[00:00:00.932,678] <err> main: Sensor is not ready
+[00:00:05.932,739] <inf> main: MAIN THREAD STILL RUNNING!
+
+[00:00:10.932,861] <inf> main: MAIN THREAD STILL RUNNING!
+*/
