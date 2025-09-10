@@ -103,3 +103,34 @@ int main(void)
 
         return 0;
 }
+
+
+/* Output Log - Working
+*** Booting nRF Connect SDK v2.7.0-5cb85570ca43 ***
+*** Using Zephyr OS v3.6.99-100befc70c74 ***
+[00:00:00.473,571] <inf> main: Starting up!
+[00:00:00.473,632] <inf> main: Sensor is ready.
+[00:00:00.474,731] <inf> main: Temperature and humidity Fetched.
+[00:00:00.474,792] <inf> main: Temperature = 27.40 C, Humidity = 51.75%
+[00:00:02.475,952] <inf> main: Temperature and humidity Fetched.
+[00:00:02.476,043] <inf> main: Temperature = 27.41 C, Humidity = 51.66%
+[00:00:04.477,203] <inf> main: Temperature and humidity Fetched.
+[00:00:04.477,294] <inf> main: Temperature = 27.37 C, Humidity = 51.63%
+[00:00:05.473,663] <inf> main: MAIN THREAD STILL RUNNING!
+*/
+
+/* Output Log - NOT Working
+[00:01:25.449,920] <inf> main: MAIN THREAD STILL RUNNING!
+
+[00:01:26.983,123] <err> main: Failed to fetch temperature and humidity.
+[00:01:26.983,215] <inf> main: Temperature = 25.93 C, Humidity = 54.51%
+[00:01:28.983,856] <err> main: Failed to fetch temperature and humidity.
+[00:01:28.983,947] <inf> main: Temperature = 25.93 C, Humidity = 54.51%
+*** Booting nRF Connect SDK v2.7.0-5cb85570ca43 ***
+*** Using Zephyr OS v3.6.99-100befc70c74 ***
+[00:00:00.932,647] <inf> main: Starting up!
+[00:00:00.932,678] <err> main: Sensor is not ready
+[00:00:05.932,739] <inf> main: MAIN THREAD STILL RUNNING!
+
+[00:00:10.932,861] <inf> main: MAIN THREAD STILL RUNNING!
+*/
