@@ -17,9 +17,9 @@ struct sensor_message {
 LOG_MODULE_REGISTER(main);
 
 K_THREAD_STACK_DEFINE(my_sensor_thread, MY_THREAD_STACK_SIZE);
-// K_THREAD_STACK_DEFINE(my_uart_thread, MY_THREAD_STACK_SIZE);
+K_THREAD_STACK_DEFINE(my_uart_thread, MY_THREAD_STACK_SIZE);
 static struct k_thread my_sensor_thread_data;
-// static struct k_thread my_uart_thread_data;
+static struct k_thread my_uart_thread_data;
 
 K_MSGQ_DEFINE(sensor_queue, sizeof(struct sensor_message), 5, 4);
 
@@ -59,7 +59,7 @@ void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
                 else {
                         msg.temp = sensor_value_to_double(&temp);
                         msg.humidity = sensor_value_to_double(&humidity);
-
+                        // LOG_INF(......);
                         k_msgq_put(&sensor_queue, &msg, K_NO_WAIT);
                 }
 
@@ -67,11 +67,14 @@ void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
         }
 }
 
-// void my_uart_thread(void *p1, void *p2, void *p3) {
-//         while (1) {
+void my_uart_thread_function(void *p1, void *p2, void *p3) {
+        struct sensor_message msg;
 
-//         }
-// }
+        while (1) {
+                k_msgq_get(&sensor_queue, &msg, K_NO_WAIT);
+                LOG_INF("Temperature = %.2f C, Humidity = %.2f%%", (double)msg.temp, (double)msg.humidity);
+        }
+}
 int main(void)
 {
         LOG_INF("Starting up!");
