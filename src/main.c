@@ -71,8 +71,10 @@ void my_uart_thread_function(void *p1, void *p2, void *p3) {
         struct sensor_message msg;
 
         while (1) {
-                k_msgq_get(&sensor_queue, &msg, K_NO_WAIT);
-                LOG_INF("Temperature = %.2f C, Humidity = %.2f%%", (double)msg.temp, (double)msg.humidity);
+                int ret = k_msgq_get(&sensor_queue, &msg, K_FOREVER);
+                if (ret == 0) {
+                        LOG_INF("Temperature = %.2f C, Humidity = %.2f%%", (double)msg.temp, (double)msg.humidity);
+                }
         }
 }
 int main(void)
@@ -88,6 +90,9 @@ int main(void)
                                 my_sensor_thread_function,(void *)sensor_device, NULL, 
                                 NULL,MY_THREAD_PRIORITY, 0, K_NO_WAIT);
 
+        k_thread_create(&my_uart_thread_data, my_uart_thread, MY_THREAD_STACK_SIZE, 
+                                my_uart_thread_function, NULL, NULL, 
+                                NULL, MY_THREAD_PRIORITY, 0, K_NO_WAIT);
 
         while (1) 
         {
