@@ -35,9 +35,11 @@ static struct gpio_callback button_cb_data;
 
 static const struct gpio_dt_spec my_led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
-void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
+void my_sensor_thread_function(void *device_ptr, void *led_ptr, void *p3) {
 	// Cast device's pointer back to the correct type
 	const struct device *sensor_device = (const struct device *)device_ptr;
+	const struct gpio_dt_spec *led0 = (const struct gpio_dt_spec *)led_ptr;
+	
 	if (!device_is_ready(sensor_device)){
 		// handle error
 		LOG_ERR("Sensor is not ready");
@@ -55,6 +57,7 @@ void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
 		k_mutex_unlock(&logging_mutex);
 		
 		if (is_logging) {
+			gpio_pin_toggle_dt(led0);
 			struct sensor_value temp, humidity;
 			int ret = sensor_sample_fetch(sensor_device);
 
@@ -81,13 +84,17 @@ void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
 				// LOG_INF(......);
 				k_msgq_put(&sensor_queue, &msg, K_NO_WAIT);
 			}
-		}
+		} else {
+            // When logging is disabled, turn LED off
+            gpio_pin_set_dt(led0, 0);
+        }
 
 		k_sleep(K_MSEC(2000)); // sleep for 2 seconds
 	}
 }
 
-void my_uart_thread_function(void *p1, void *p2, void *p3) {
+void my_uart_thread_function(void *led_ptr, void *p2, void *p3) {
+	const struct gpio_dt_spec *led0 = (const struct gpio_dt_spec *)led_ptr;
 	struct sensor_message msg;
 
 	while (1) {
@@ -107,8 +114,10 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, gpio_por
 	LOG_INF("Button pressed!");
 	if (logging_enabled) {
 		LOG_INF("Sensor logging enabled!");
+		gpio_pin_set_dt(&my_led0, 1);
 	} else {
 		LOG_INF("Sensor logging disabled!");
+		gpio_pin_set_dt(&my_led0, 0);
 	}
 	
 	k_mutex_unlock(&logging_mutex);
@@ -160,58 +169,19 @@ int main(void)
 	gpio_add_callback(button.port, &button_cb_data);
 
 	k_thread_create(&my_sensor_thread_data, my_sensor_thread, MY_THREAD_STACK_SIZE, 
-						my_sensor_thread_function,(void *)sensor_device, NULL, 
+						my_sensor_thread_function,(void *)sensor_device,(void *)&my_led0, 
 						NULL,MY_THREAD_PRIORITY, 0, K_NO_WAIT);
 
 	k_thread_create(&my_uart_thread_data, my_uart_thread, MY_THREAD_STACK_SIZE, 
-                        my_uart_thread_function, NULL, NULL, 
+                        my_uart_thread_function, (void *)&my_led0, NULL, 
                         NULL, MY_THREAD_PRIORITY, 0, K_NO_WAIT);
 
 	while (1) 
 	{
 		k_sleep(K_MSEC(5000));
-		// LOG_INF("MAIN THREAD STILL RUNNING!\n");
 	}
 	
 
 	return 0;
 }
-
-/* Output Log 
-*** Booting nRF Connect SDK v2.7.0-5cb85570ca43 ***
-*** Using Zephyr OS v3.6.99-100befc70c74 ***
-[00:00:00.479,064] <inf> main: Starting up!
-[00:00:00.479,064] <inf> main: Logging mutex initialized
-[00:00:00.479,064] <inf> main: Button is ready.
-[00:00:00.479,095] <inf> main: Button configured as input.
-[00:00:00.479,125] <inf> main: Sensor is ready.
-[00:00:00.480,224] <inf> main: Temperature and humidity Fetched.
-[00:00:00.480,316] <inf> main: Temperature = 25.03 C, Humidity = 56.70%
-[00:00:02.481,445] <inf> main: Temperature and humidity Fetched.
-[00:00:02.481,536] <inf> main: Temperature = 25.06 C, Humidity = 57.01%
-[00:00:03.462,799] <inf> main: Button pressed!
-[00:00:03.462,799] <inf> main: Sensor logging disabled!
-[00:00:13.376,831] <inf> main: Button pressed!
-[00:00:13.376,861] <inf> main: Sensor logging enabled!
-[00:00:14.483,032] <inf> main: Temperature and humidity Fetched.
-[00:00:14.483,123] <inf> main: Temperature = 25.09 C, Humidity = 56.35%
-[00:00:16.484,252] <inf> main: Temperature and humidity Fetched.
-[00:00:16.484,344] <inf> main: Temperature = 25.07 C, Humidity = 56.25%
-[00:00:18.485,473] <inf> main: Temperature and humidity Fetched.
-[00:00:18.485,565] <inf> main: Temperature = 25.09 C, Humidity = 56.30%
-[00:00:20.486,694] <inf> main: Temperature and humidity Fetched.
-[00:00:20.486,785] <inf> main: Temperature = 25.09 C, Humidity = 56.12%
-[00:00:21.633,361] <inf> main: Button pressed!
-[00:00:21.633,392] <inf> main: Sensor logging disabled!
-[00:00:24.289,489] <inf> main: Button pressed!
-[00:00:24.289,489] <inf> main: Sensor logging enabled!
-[00:00:24.487,976] <inf> main: Temperature and humidity Fetched.
-[00:00:24.488,067] <inf> main: Temperature = 25.07 C, Humidity = 55.93%
-[00:00:26.489,196] <inf> main: Temperature and humidity Fetched.
-[00:00:26.489,288] <inf> main: Temperature = 25.06 C, Humidity = 55.90%
-[00:00:28.490,417] <inf> main: Temperature and humidity Fetched.
-[00:00:28.490,509] <inf> main: Temperature = 25.06 C, Humidity = 55.81%
-[00:00:30.451,995] <inf> main: Button pressed!
-[00:00:30.451,995] <inf> main: Sensor logging disabled!
-*/
 
