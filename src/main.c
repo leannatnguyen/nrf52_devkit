@@ -12,6 +12,7 @@
 #define MY_THREAD_PRIORITY 5
 
 #define SW0_NODE	DT_ALIAS(sw0)
+#define LED0_NODE	DT_ALIAS(led0)
 struct sensor_message {
         float temp;
         float humidity;
@@ -32,6 +33,8 @@ K_MSGQ_DEFINE(sensor_queue, sizeof(struct sensor_message), 5, 4);
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
 static struct gpio_callback button_cb_data;
 
+static const struct gpio_dt_spec my_led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+
 void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
 	// Cast device's pointer back to the correct type
 	const struct device *sensor_device = (const struct device *)device_ptr;
@@ -44,6 +47,7 @@ void my_sensor_thread_function(void *device_ptr, void *p2, void *p3) {
 
 	struct sensor_message msg;
 	bool is_logging;
+	// bool led_state;
 
 	while (1) {
 		k_mutex_lock(&logging_mutex, K_FOREVER);
@@ -127,7 +131,6 @@ int main(void)
 		return 0;
 	}
 	LOG_INF("Button is ready.");
-
 	// configure the button as an input
 	int ret_button = gpio_pin_configure_dt(&button, GPIO_INPUT);
 	ret_button = gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
@@ -136,6 +139,21 @@ int main(void)
 		return 0;
 	}
 	LOG_INF("Button configured as input.");
+
+	// Check if LED is ready
+	if (!gpio_is_ready_dt(&my_led0)){
+		LOG_ERR("LED is not ready.");
+		return 0;
+	}
+	LOG_INF("LED is ready");	
+	// Configure button as output
+	int ret_led = gpio_pin_configure_dt(&my_led0, GPIO_OUTPUT_ACTIVE);
+	if (ret_led != 0) {
+		LOG_ERR("Failed to configure LED1");
+		return 0;
+	}
+	LOG_INF("LED configured as output.");
+
 
 	// init callback
 	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
