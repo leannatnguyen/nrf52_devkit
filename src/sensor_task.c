@@ -1,4 +1,5 @@
 #include "sensor_task.h"
+#include "common.h"
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
 
@@ -6,6 +7,8 @@ LOG_MODULE_REGISTER(sensor_task);
 static const struct device *sensor_device;
 
 void init_sensor(void) {
+    sensor_device = DEVICE_DT_GET(MY_SENSOR_NODE);
+
     if (!device_is_ready(sensor_device)){
 		// handle error
 		LOG_ERR("Sensor is not ready");

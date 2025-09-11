@@ -1,4 +1,5 @@
 #include "uart_task.h"
+#include "common.h"
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_REGISTER(uart_task);

@@ -3,7 +3,7 @@
 
 #include <zephyr/kernel.h>
 
-#define SW0_NODE				DT_ALIAS(sw0)
+#define MY_SENSOR_NODE DT_ALIAS(my_sensor)
 
 void init_sensor(void);
 void my_sensor_thread_function(void *p1, void *p2, void *p3);

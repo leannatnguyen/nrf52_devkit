@@ -5,6 +5,7 @@
 #include "sensor_task.h"
 #include "uart_task.h"
 #include "button_handler.h"
+#include "common.h"
 
 // Thread defines
 #define MY_THREAD_STACK_SIZE 	1024
