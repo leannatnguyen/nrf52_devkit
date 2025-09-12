@@ -9,4 +9,5 @@ target_sources(app PRIVATE
                 src/main.c
                 src/sensor_task.c
                 src/uart_task.c
-                src/button_handler.c)
+                src/button_handler.c
+                src/led_handler.c)

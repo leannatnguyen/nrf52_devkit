@@ -2,6 +2,7 @@
 #include "common.h"
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include "led_handler.h"
 
 LOG_MODULE_REGISTER(button_handler);
 
@@ -14,11 +15,13 @@ void button_press_handler(const struct device *dev, struct gpio_callback *cb, gp
 
 	// toggle logging enabled since button was pressed
 	logging_enabled = !logging_enabled;
-	LOG_INF("Button pressed!");
+
 	if (logging_enabled) {
 		LOG_INF("Sensor logging enabled!");
+		led_on();
 	} else {
 		LOG_INF("Sensor logging disabled!");
+		led_off();
 	}
 	
 	k_mutex_unlock(&logging_mutex);

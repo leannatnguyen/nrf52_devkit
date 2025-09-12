@@ -6,10 +6,12 @@
 #include "uart_task.h"
 #include "button_handler.h"
 #include "common.h"
+#include "led_handler.h"
 
 // Thread defines
 #define MY_THREAD_STACK_SIZE 	1024
 #define MY_THREAD_PRIORITY 		5
+
 
 LOG_MODULE_REGISTER(main);
 
@@ -23,6 +25,8 @@ bool logging_enabled = true;
 K_MUTEX_DEFINE(logging_mutex);
 K_MSGQ_DEFINE(sensor_queue, sizeof(struct sensor_message), 5, 4);
 
+const struct gpio_dt_spec my_led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+
 int main(void)
 {
 	LOG_INF("Environmental logger starting up!");
@@ -30,9 +34,11 @@ int main(void)
 	// Init mutex
 	k_mutex_init(&logging_mutex);
 
-	// Init sensor and button
+	// Init sensor, button, LED
     init_sensor();
 	init_button();
+	init_led_handler();
+	
 
 	// Create threads for sensor + uart
 	k_thread_create(&my_sensor_thread_data, my_sensor_thread, MY_THREAD_STACK_SIZE, 
