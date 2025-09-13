@@ -13,6 +13,7 @@ I completed this project to get a better understanding of how to interface a sen
 
 ## Setup
 ### Physical Setup
+![Wiring Diagram](assets/IMG_3377.jpg.jpg)
 Note: I'll be referring to the devkit in the orientation with the power switch on the top left and USB connection at the top. 
 Connect the I2C SHT3X sensor to your nRF52 DK in the following order:
 1. Connect the sensor's VIN pin to the devkit's VDD (left side under the boot button).
