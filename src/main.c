@@ -12,7 +12,6 @@
 #define MY_THREAD_STACK_SIZE 	1024
 #define MY_THREAD_PRIORITY 		5
 
-
 LOG_MODULE_REGISTER(main);
 
 // Thread stack defines
